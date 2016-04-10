@@ -1,21 +1,18 @@
 # Author:   Nicholai Mitchko
 # File  :   main.py
 # Desc  :   Python Script that scrapes reviews and codes them for research purposes (Json format)
-# Date  :   4/6/2016
+# Date  :   4/9/2016
 
 from pyquery import PyQuery
 import json
 import time
 import requests
 import re
+import thread
 from lxml import etree
 import urllib
 
 baseUrl = "https://www.tripadvisor.com/"
-
-html1 = PyQuery(
-    url='https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=0')
-
 ReviewArray = []
 i = 0
 ReviewData = {}
@@ -23,7 +20,6 @@ ReviewData = {}
 
 def manual_parse(index, node):
     global ReviewArray, i
-    i += 1
     review = PyQuery(node)
     ReviewArray.append({})
     ReviewArray[i]['ProviderName'] = ReviewData['ProviderName']
@@ -56,16 +52,23 @@ def manual_parse(index, node):
     ReviewArray[i]['ReviewText'] = reviewExpanded('.entry').find('[property="reviewBody"]').text()
     ReviewArray[i]['ReviewURL'] = fullUrl
     levelstring = review('.levelBadge').find('img').attr['src']
-    ReviewArray[i]['ReviewerLevelContrib'] = levelstring[levelstring.index('lvl_') + 4:levelstring.index('.png')]
+    try:
+        ReviewArray[i]['ReviewerLevelContrib'] = levelstring[levelstring.index('lvl_') + 4:levelstring.index('.png')]
+    except AttributeError:
+        print 'No Level Found'
     ReviewArray[i]['ReviewerNumHelpful'] = re.sub(r"\D", "", review('.helpfulVotesBadge').find('span').text())
-    member = PyQuery(url=baseUrl + 'members/' + ReviewArray[i]['ReviewerName'], parser='html')
+    id = review('.col1of2').find('.memberOverlayLink').attr['id']
+    userUrl = get_username(id[4:id.index('-')], id[id.index('SRC_')+4:])
+    member = PyQuery(url=baseUrl + userUrl, parser='html')
     ReviewArray[i]['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
-    ReviewArray[i]['ReviewerNumReviews'] = re.sub(r"\D", "",
-                                                  member('li.content-info').find('a').filter('[name="reviews"]').text())
+    ReviewArray[i]['ReviewerNumReviews'] = re.sub(r"\D", "", member('li.content-info').find('a').filter('[name="reviews"]').text())
     ReviewArray[i]['ReviewerSince'] = member('.ageSince').find('p.since').text().replace('Since', '')
-    ReviewArray[i]['ReviewerAge'] = member('.ageSince').find('p')[1].text
-    ReviewArray[i]['ReviewerPhotos'] = re.sub(r"\D", "",
-                                              member('li.content-info').find('a').filter('[name="photos"]').text())
+    try:
+        ReviewArray[i]['ReviewerAge'] = member('.ageSince').find('p')[1].text
+    except IndexError:
+        print 'No Age Found'
+    ReviewArray[i]['ReviewerPhotos'] = re.sub(r"\D", "",  member('li.content-info').find('a').filter('[name="photos"]').text())
+    i += 1
     print i
 
 
@@ -83,15 +86,19 @@ def parse_review(review_page, url):
 
 
 def parse_url_and_review(index, node):
+    global i
+    if i >= 8:
+        print json.dumps(ReviewArray)
     element = PyQuery(node)
     onclickattr = element.attr['onclick']
     attrurl = onclickattr[onclickattr.index('\'/') + 2:onclickattr.index('\')')]
     completeurl = baseUrl + attrurl
     print "processing: " + completeurl
-    parse_review(PyQuery(url=completeurl, parser='html'), attrurl)
+    parse_review(PyQuery(url=completeurl), attrurl)
 
 
-def parse_review_urls(page):
+def parse_review_urls(url_):
+    page = PyQuery(url=url_, parser='html')
     a = page(".result.ATTRACTIONS")
     a.each(parse_url_and_review)
 
@@ -110,8 +117,20 @@ def get_review(url, type_):
     return r.content
 
 
-ReviewLimits = {0, 30, 60}
-SearchQuery = {}
-parse_review_urls(html1)
+def get_username(uid, src):
+    r = requests.get('https://www.tripadvisor.com/MemberOverlay', params={'uid': uid,
+                                 'c': '',
+                                 'src': src,
+                                 'fus': 'false',
+                                 'partner': 'false',
+                                 'Lsold': ''})
+    R = PyQuery(r.content, parser='html')
+    return R("a").attr['href']
+
+
+timeRange = {0, 30, 60}
+for x in timeRange:
+    parse_review_urls('https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=' + str(x))
+
 
 print json.dumps(ReviewArray)
