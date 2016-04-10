@@ -4,7 +4,7 @@
 # Date  :   4/9/2016
 
 from pyquery import PyQuery
-import csv
+import unicodecsv as csv
 import json
 import time
 import requests
@@ -135,15 +135,11 @@ def get_username(uid, src):
     return R("a").attr['href']
 
 
-timeRange = {0}
+timeRange = {0, 30, 60}
 ReviewArray = []
 for x in timeRange:
     print "Parsing First " + str(x + 30) + " results"
-    r = parse_review_urls('https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=' + str(x))
-    if len(r) == 0:
-        break
-    else:
-        ReviewArray += r
+    ReviewArray += parse_review_urls('https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=' + str(x))
 
 print "Writing JSON File:..."
 with open('data.json', 'w') as outfile:
@@ -152,9 +148,7 @@ with open('data.json', 'w') as outfile:
 
 print "Writing CSV File:..."
 with open('data.csv', 'wb') as f:  # Just use 'w' mode in 3.x
-    w = csv.DictWriter(f, ReviewArray[0][0].keys())
+    w = csv.DictWriter(f, ReviewArray[0][0].keys(), encoding='utf-8')
     w.writeheader()
     for a in ReviewArray:
-        for Reviews in ReviewArray:
-            Reviews = []
-            w.writerows(Reviews)
+        w.writerows(a)
