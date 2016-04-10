@@ -4,103 +4,110 @@
 # Date  :   4/9/2016
 
 from pyquery import PyQuery
+import csv
 import json
 import time
 import requests
 import re
-import thread
 from lxml import etree
-import urllib
+import urllib2
+from multiprocessing.dummy import Pool as ThreadPool
 
 baseUrl = "https://www.tripadvisor.com/"
-ReviewArray = []
-i = 0
-ReviewData = {}
 
 
-def manual_parse(index, node):
-    global ReviewArray, i
+def manual_parse(node, ReviewData):
     review = PyQuery(node)
-    ReviewArray.append({})
-    ReviewArray[i]['ProviderName'] = ReviewData['ProviderName']
-    ReviewArray[i]['ProviderLocation'] = ReviewData['Provider Location']
-    ReviewArray[i]['ClassType'] = ReviewData['Class Type']
-    ReviewArray[i]['ReviewType'] = ReviewData['Review Type']
-    ReviewArray[i]['PointsRate'] = review('.sprite-rating_s_fill').attr['alt'][0:1]
-    ReviewArray[i]['ReviewTitle'] = review('.noQuotes').text()
-    ReviewArray[i]['ReviewerName'] = review('.username').text()
+    reviewarray = {}
+    reviewarray['ProviderName'] = ReviewData['ProviderName']
+    reviewarray['ProviderLocation'] = ReviewData['Provider Location']
+    reviewarray['ClassType'] = ReviewData['Class Type']
+    reviewarray['ReviewType'] = ReviewData['Review Type']
+    reviewarray['PointsRate'] = review('.sprite-rating_s_fill').attr['alt'][0:1]
+    reviewarray['ReviewTitle'] = review('.noQuotes').text()
+    reviewarray['ReviewerName'] = review('.username').text()
     location = review('.location').text()
     try:
-        ReviewArray[i]['ReviewerLocationCity'] = location[0:location.index(',')]
-        ReviewArray[i]['ReviewerLocationState'] = location[location.index(',') + 2:]
+        reviewarray['ReviewerLocationCity'] = location[0:location.index(',')]
+        reviewarray['ReviewerLocationState'] = location[location.index(',') + 2:]
     except ValueError:
-        ReviewArray[i]['ReviewerLocationState'] = location
-        ReviewArray[i]['ReviewerLocationCity'] = ""
-    ReviewArray[i]['ReviewNumPic'] = review('col2of2 > img').__len__()
-    ReviewArray[i]['ReviewPicture'] = 'Yes' if ReviewArray[i]['ReviewNumPic'] > 0 else 'No'
-    ReviewArray[i]['ReviewMobile'] = 'Yes' if review('.viaMobile').__len__() > 0 else 'No'
+        reviewarray['ReviewerLocationState'] = location
+        reviewarray['ReviewerLocationCity'] = ""
+    reviewarray['ReviewNumPic'] = review('col2of2 > img').__len__()
+    reviewarray['ReviewPicture'] = 'Yes' if reviewarray['ReviewNumPic'] > 0 else 'No'
+    reviewarray['ReviewMobile'] = 'Yes' if review('.viaMobile').__len__() > 0 else 'No'
     try:
         review_date = time.strptime(review('.ratingDate').attr['title'].replace('Reviewed ', ''), "%B %d, %Y")
-        ReviewArray[i]['ReviewDate'] = time.strftime("%m/%d/%y", review_date)
+        reviewarray['ReviewDate'] = time.strftime("%m/%d/%y", review_date)
     except AttributeError:
-        ReviewArray[i]['ReviewDate'] = "None found"
-    ReviewArray[i]['ReviewHelpful'] = review('.numHlpIn').text()
+        reviewarray['ReviewDate'] = "None found"
+    reviewarray['ReviewHelpful'] = review('.numHlpIn').text()
     fullUrl = baseUrl + review('.col2of2').find('a').attr['href']
     reviewExpanded = PyQuery(url=fullUrl, parser='html')
     visitDate = time.strptime(reviewExpanded('.recommend-titleInline')[0].text.replace('Visited ', ''), '%B %Y')
-    ReviewArray[i]['DateVisited'] = time.strftime('%m/%d', visitDate) if visitDate != 0 else "No Date Provided"
-    ReviewArray[i]['ReviewText'] = reviewExpanded('.entry').find('[property="reviewBody"]').text()
-    ReviewArray[i]['ReviewURL'] = fullUrl
+    reviewarray['DateVisited'] = time.strftime('%m/%d', visitDate) if visitDate != 0 else "No Date Provided"
+    reviewarray['ReviewText'] = reviewExpanded('.entry').find('[property="reviewBody"]').text()
+    reviewarray['ReviewURL'] = fullUrl
     levelstring = review('.levelBadge').find('img').attr['src']
     try:
-        ReviewArray[i]['ReviewerLevelContrib'] = levelstring[levelstring.index('lvl_') + 4:levelstring.index('.png')]
+        reviewarray['ReviewerLevelContrib'] = levelstring[levelstring.index('lvl_') + 4:levelstring.index('.png')]
     except AttributeError:
-        print 'No Level Found'
-    ReviewArray[i]['ReviewerNumHelpful'] = re.sub(r"\D", "", review('.helpfulVotesBadge').find('span').text())
+        reviewarray['ReviewerLevelContrib'] = 'No Level Found'
+    reviewarray['ReviewerNumHelpful'] = re.sub(r"\D", "", review('.helpfulVotesBadge').find('span').text())
     id = review('.col1of2').find('.memberOverlayLink').attr['id']
     userUrl = get_username(id[4:id.index('-')], id[id.index('SRC_')+4:])
     member = PyQuery(url=baseUrl + userUrl, parser='html')
-    ReviewArray[i]['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
-    ReviewArray[i]['ReviewerNumReviews'] = re.sub(r"\D", "", member('li.content-info').find('a').filter('[name="reviews"]').text())
-    ReviewArray[i]['ReviewerSince'] = member('.ageSince').find('p.since').text().replace('Since', '')
+    reviewarray['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
+    reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "", member('li.content-info').find('a').filter('[name="reviews"]').text())
+    reviewarray['ReviewerSince'] = member('.ageSince').find('p.since').text().replace('Since', '')
     try:
-        ReviewArray[i]['ReviewerAge'] = member('.ageSince').find('p')[1].text
+        reviewarray['ReviewerAge'] = member('.ageSince').find('p')[1].text
     except IndexError:
-        print 'No Age Found'
-    ReviewArray[i]['ReviewerPhotos'] = re.sub(r"\D", "",  member('li.content-info').find('a').filter('[name="photos"]').text())
-    i += 1
-    print i
+        reviewarray['ReviewerAge']=  'No Age Found'
+    reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",  member('li.content-info').find('a').filter('[name="photos"]').text())
+    return reviewarray
 
 
 def parse_review(review_page, url):
-    global ReviewData
-    ReviewData['ProviderName'] = review_page("#HEADING").text()
-    ReviewData['Provider Location'] = review_page(".format_address").text().replace('Address: ', '')
-    ReviewData['Class Type'] = 'Dance'
+    reviewdata = {}
+    reviewarray = []
+    reviewdata['ProviderName'] = review_page("#HEADING").text()
+    reviewdata['Provider Location'] = review_page(".format_address").text().replace('Address: ', '')
+    reviewdata['Class Type'] = 'Dance'
     solo_reviews = PyQuery(get_review(url, 5), parser='html')
-    ReviewData['Review Type'] = 'Solo'
-    solo_reviews('.reviewSelector').each(manual_parse)
+    reviewdata['Review Type'] = 'Solo'
+    for x in solo_reviews('.reviewSelector').items():
+        reviewarray.append(manual_parse(x, reviewdata).copy())
     couple_reviews = PyQuery(get_review(url, 2), parser='html')
-    ReviewData['Review Type'] = 'Couples'
-    couple_reviews('.reviewSelector').each(manual_parse)
+    reviewdata['Review Type'] = 'Couples'
+    for x in couple_reviews('.reviewSelector').items():
+        reviewarray.append(manual_parse(x, reviewdata).copy())
+    return reviewarray
 
 
-def parse_url_and_review(index, node):
-    global i
-    if i >= 8:
-        print json.dumps(ReviewArray)
-    element = PyQuery(node)
-    onclickattr = element.attr['onclick']
-    attrurl = onclickattr[onclickattr.index('\'/') + 2:onclickattr.index('\')')]
-    completeurl = baseUrl + attrurl
-    print "processing: " + completeurl
-    parse_review(PyQuery(url=completeurl), attrurl)
+def parse_url_and_review(attrurl):
+    return parse_review(PyQuery(url=baseUrl + attrurl), attrurl)
 
 
 def parse_review_urls(url_):
     page = PyQuery(url=url_, parser='html')
-    a = page(".result.ATTRACTIONS")
-    a.each(parse_url_and_review)
+    urls = []
+    for a in page(".result.ATTRACTIONS").items():
+        onclickattr = PyQuery(a).attr['onclick']
+        attrurl = onclickattr[onclickattr.index('\'/') + 2:onclickattr.index('\')')]
+        urls.append(attrurl)
+    print "Building Thread Pool"
+    pool = ThreadPool(len(urls))
+    try:
+        print "Running " +  str(len(urls)) + " Threads"
+        results = pool.map(parse_url_and_review, urls)
+        pool.close()
+        pool.join()
+        return results
+    except Exception:
+        pool.close()
+        pool.join()
+        return []
 
 
 def get_review(url, type_):
@@ -128,9 +135,26 @@ def get_username(uid, src):
     return R("a").attr['href']
 
 
-timeRange = {0, 30, 60}
+timeRange = {0}
+ReviewArray = []
 for x in timeRange:
-    parse_review_urls('https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=' + str(x))
+    print "Parsing First " + str(x + 30) + " results"
+    r = parse_review_urls('https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=' + str(x))
+    if len(r) == 0:
+        break
+    else:
+        ReviewArray += r
+
+print "Writing JSON File:..."
+with open('data.json', 'w') as outfile:
+    json.dump(ReviewArray, outfile)
 
 
-print json.dumps(ReviewArray)
+print "Writing CSV File:..."
+with open('data.csv', 'wb') as f:  # Just use 'w' mode in 3.x
+    w = csv.DictWriter(f, ReviewArray[0][0].keys())
+    w.writeheader()
+    for a in ReviewArray:
+        for Reviews in ReviewArray:
+            Reviews = []
+            w.writerows(Reviews)
