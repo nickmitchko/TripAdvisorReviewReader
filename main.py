@@ -8,6 +8,7 @@ import unicodecsv as csv
 import json
 import time
 import requests
+import copy
 import re
 from lxml import etree
 import urllib2
@@ -103,11 +104,11 @@ def parse_review_urls(url_):
         results = pool.map(parse_url_and_review, urls)
         pool.close()
         pool.join()
-        return results
+        return [results, len(urls)]
     except Exception:
         pool.close()
         pool.join()
-        return []
+        return [[], 0]
 
 
 def get_review(url, type_):
@@ -135,19 +136,30 @@ def get_username(uid, src):
     return R("a").attr['href']
 
 
-timeRange = {0, 30, 60}
+var = raw_input("Enter Search Query: ")
+print "Searching For", var
+urlvar = urllib2.quote(var, ':/')
+searchUrl = 'https://www.tripadvisor.com/Search?q=' + urlvar + '&geo=60763&pid=3826&ssrc=A&o='
+print "Creafted Search URL: " + searchUrl
+print "------------------------------"
+x = 0
 ReviewArray = []
-for x in timeRange:
-    print "Parsing First " + str(x + 30) + " results"
-    ReviewArray += parse_review_urls('https://www.tripadvisor.com/Search?q=dance+classes&geo=60763&pid=3826&ssrc=A&o=' + str(x))
+while 1:
+    print "Parsing " + str(x + 30)
+    RA = parse_review_urls(searchUrl + str(x))
+    ReviewArray += RA[0]
+    if RA[1] < 30:
+        break
+    x += 30
+
 
 print "Writing JSON File:..."
-with open('data.json', 'w') as outfile:
+with open('data_' + var + '.json', 'w') as outfile:
     json.dump(ReviewArray, outfile)
 
 
 print "Writing CSV File:..."
-with open('data.csv', 'wb') as f:  # Just use 'w' mode in 3.x
+with open('data_' + var + '.csv', 'wb') as f:  # Just use 'w' mode in 3.x
     w = csv.DictWriter(f, ReviewArray[0][0].keys(), encoding='utf-8')
     w.writeheader()
     for a in ReviewArray:
