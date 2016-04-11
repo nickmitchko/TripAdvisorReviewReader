@@ -56,20 +56,23 @@ def manual_parse(node, ReviewData):
         reviewarray['ReviewerLevelContrib'] = 'No Level Found'
     reviewarray['ReviewerNumHelpful'] = re.sub(r"\D", "", review('.helpfulVotesBadge').find('span').text())
     id = review('.col1of2').find('.memberOverlayLink').attr['id']
-    userUrl = get_username(id[4:id.index('-')], id[id.index('SRC_')+4:])
+    userUrl = get_username(id[4:id.index('-')], id[id.index('SRC_') + 4:])
     member = PyQuery(url=baseUrl + userUrl, parser='html')
     reviewarray['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
-    reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "", member('li.content-info').find('a').filter('[name="reviews"]').text())
+    reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "",
+                                               member('li.content-info').find('a').filter('[name="reviews"]').text())
     reviewarray['ReviewerSince'] = member('.ageSince').find('p.since').text().replace('Since', '')
     try:
         reviewarray['ReviewerAge'] = member('.ageSince').find('p')[1].text
     except IndexError:
-        reviewarray['ReviewerAge']=  'No Age Found'
-    reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",  member('li.content-info').find('a').filter('[name="photos"]').text())
+        reviewarray['ReviewerAge'] = 'No Age Found'
+    reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
+                                           member('li.content-info').find('a').filter('[name="photos"]').text())
     return reviewarray
 
 
 def parse_review(review_page, url):
+    print url
     reviewdata = {}
     reviewarray = []
     reviewdata['ProviderName'] = review_page("#HEADING").text()
@@ -99,16 +102,11 @@ def parse_review_urls(url_):
         urls.append(attrurl)
     print "Building Thread Pool"
     pool = ThreadPool(len(urls))
-    try:
-        print "Running " +  str(len(urls)) + " Threads"
-        results = pool.map(parse_url_and_review, urls)
-        pool.close()
-        pool.join()
-        return [results, len(urls)]
-    except Exception:
-        pool.close()
-        pool.join()
-        return [[], 0]
+    print "Running " + str(len(urls)) + " Threads"
+    results = pool.map(parse_url_and_review, urls)
+    pool.close()
+    pool.join()
+    return results
 
 
 def get_review(url, type_):
@@ -119,19 +117,19 @@ def get_review(url, type_):
     r = requests.post(baseUrl + url, data={'mode': 'filterReviews',
                                            'filterRating': '',
                                            'filterSegment': type_,
-                                           'filterSegment': '',
                                            'filterSeasons': '',
-                                           'filterLang': 'en'})
+                                           'filterLang': 'en',
+                                           'returnTo': ''})
     return r.content
 
 
 def get_username(uid, src):
     r = requests.get('https://www.tripadvisor.com/MemberOverlay', params={'uid': uid,
-                                 'c': '',
-                                 'src': src,
-                                 'fus': 'false',
-                                 'partner': 'false',
-                                 'Lsold': ''})
+                                                                          'c': '',
+                                                                          'src': src,
+                                                                          'fus': 'false',
+                                                                          'partner': 'false',
+                                                                          'Lsold': ''})
     R = PyQuery(r.content, parser='html')
     return R("a").attr['href']
 
@@ -144,19 +142,17 @@ print "Creafted Search URL: " + searchUrl
 print "------------------------------"
 x = 0
 ReviewArray = []
+
 while 1:
-    print "Parsing " + str(x + 30)
-    RA = parse_review_urls(searchUrl + str(x))
-    ReviewArray += RA[0]
-    if RA[1] < 30:
+    print "Parsing " + str(x) + " - " + str(x + 30)
+    r = parse_review_urls(searchUrl + str(x))
+    if r[1] < 30:
         break
     x += 30
-
 
 print "Writing JSON File:..."
 with open('data_' + var + '.json', 'w') as outfile:
     json.dump(ReviewArray, outfile)
-
 
 print "Writing CSV File:..."
 with open('data_' + var + '.csv', 'wb') as f:  # Just use 'w' mode in 3.x
