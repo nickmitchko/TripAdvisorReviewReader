@@ -5,6 +5,12 @@ I use the python library pycharm to do HTML processing
 
 ## Output Files
 
-Data.csv -> File that can be opened in Excel and similar spreadsheet applications
+data_(Search Query).json
 
-Data.json-> File than can easily be imported into applications and processing software
+data_(Search Query).csv
+
+## Installation
+
+1. Install [Python 2.7.11](https://www.python.org/ftp/python/2.7.11/python-2.7.11.amd64.msi) for Windows
+2. Run Setup.cmd as Administrator
+3. Double click run.cmd

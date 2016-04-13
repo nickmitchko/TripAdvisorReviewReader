@@ -4,6 +4,8 @@ import requests
 import re
 import time
 import json
+import sys
+# import traceback
 import unicodecsv as csv
 import datetime
 from lxml import etree
@@ -30,31 +32,38 @@ class TripAdvisor:
         self.threading_done = False
 
     def save_to_file(self, out_type={'json', 'csv'}):
+        filename = self.searchQuery + '_' + str(self.geo) + '_' + str(self.resultLimit) + '_' + str(
+            self.reviewLimit) + '_' + str(self.resultType)
         for i in out_type:
             if i == 'json':
-                with open('data_' + self.searchQuery + '.json', 'w') as outfile:
+                with open("data/scrape_" + filename + ".json", 'w') as outfile:
                     json.dump(self.reviewResults, outfile)
-                print 'data_' + self.searchQuery + '.json' + " Created"
+                print 'File Created', 'data/scrape_' + filename + '.json'
             if i == 'csv':
-                with open('data_' + self.searchQuery + '.csv', 'wb') as f:  # Just use 'w' mode in 3.x
+                with open('data/scrape_' + filename + '.csv', 'wb') as f:  # Just use 'w' mode in 3.x
                     w = csv.DictWriter(f, self.reviewResults[0][0].keys(), encoding='utf-8')
                     w.writeheader()
                     for a in self.reviewResults:
                         w.writerows(a)
-                print 'data_' + self.searchQuery + '.csv' + " Created"
+                print 'File Created', 'data/scrape_' + filename + '.csv'
 
     def parse_reviews(self):
         self.searchAmount = 0
+        sa = 0
         while 1:
             urls = self.get_attraction_urls(self.search())
             remaining = min(self.resultLimit - len(self.reviewResults), 30)
+            print ""
+            print "Trying ", str(self.resultLimit - self.searchAmount), " Remaining Attractions"
             if len(urls) == 0 or remaining <= 0:
                 break
             if remaining < 30:
                 urls = urls[:remaining]
-            self.searchAmount += len(urls)
+            self.searchAmount += 30
+            print "Scraping ", remaining, " URLS"
             self.parse_pool(urls, process_num=self.threading_multiple)
             self.clean_list()
+        print "I found", len(self.reviewResults), " Attractions"
         self.threading_done = True
 
     def clean_list(self):
@@ -69,9 +78,7 @@ class TripAdvisor:
                                              izip(urls, repeat(self.reviewTypes), repeat(self.reviewLimit)))
         threadPool.close()
         threadPool.join()
-
-    def save_result(self, result):
-        self.reviewResults += result
+        sys.stdout.flush()
 
     @staticmethod
     def threadCallHandler(a_b_c):
@@ -79,13 +86,16 @@ class TripAdvisor:
 
     @staticmethod
     def makereview(url, review_types, review_limit):
-        review_page = PyQuery(TripAdvisor.baseURL + url, parser='html')
-        review_data = TripAdvisor.get_review_info(review_page)
-        pageReviews = []
-        for Name, Type in review_types.iteritems():
-            review_data['Review Type'] = Name
-            pageReviews += TripAdvisor.get_reviews_by_type(url, Type, review_data, review_limit)
-        return pageReviews
+        try:
+            review_page = PyQuery(TripAdvisor.baseURL + url, parser='html')
+            review_data = TripAdvisor.get_review_info(review_page)
+            pageReviews = []
+            for Name, Type in review_types.iteritems():
+                review_data['Review Type'] = Name
+                pageReviews += TripAdvisor.get_reviews_by_type(url, Type, review_data, review_limit)
+            return pageReviews
+        except Exception:
+            return []
 
     @staticmethod
     def get_reviews_by_type(attraction_url, review_type_number, review_data, review_limit=5):
@@ -140,36 +150,55 @@ class TripAdvisor:
         except AttributeError:
             reviewarray['ReviewerLevelContrib'] = 0
         reviewarray['ReviewerNumHelpful'] = re.sub(r"\D", "", review('.helpfulVotesBadge').find('span').text())
-        id = review('.col1of2').find('.memberOverlayLink').attr['id']
-        userUrl = TripAdvisor.get_username(id[4:id.index('-')], id[id.index('SRC_') + 4:])
-        member = PyQuery(url=TripAdvisor.baseURL + userUrl, parser='html')
-        reviewarray['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
-        reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "",
-                                                   member('li.content-info').find('a').filter(
-                                                       '[name="reviews"]').text())
-
-        reviewarray['ReviewerSince'] = TripAdvisor.getStartDateString(
-            member('.ageSince').find('p.since').text().replace('Since ', ''))
-        memberHTML = member('.ageSince').html().lower()
-        reviewarray['ReviewerGender'] = 'NA'
-        for sex, sexlttr in TripAdvisor.genderMapping.iteritems():
-            try:
-                if memberHTML.index(sex) != -1:
-                    reviewarray['ReviewerGender'] = sexlttr
-            except ValueError:
-                pass
-        try:
-            reviewarray['ReviewerAge'] = member('.ageSince').find('p')[1].text
-        except IndexError:
+        id_ = review('.col1of2').find('.memberOverlayLink').attr['id']
+        userUrl = ""
+        if not isinstance(id, str):
+            reviewarray['ReviewerSince'] = 'NA'
+            reviewarray['ReviewerPoints'] = 0
+            reviewarray['ReviewerSince'] = 0
+            reviewarray['ReviewerGender'] = 'NA'
             reviewarray['ReviewerAge'] = 'NA'
-        reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
-                                               member('li.content-info').find('a').filter('[name="photos"]').text())
+            reviewarray['ReviewerPhotos'] = 0
+            pass
+        else:
+            try:
+                userUrl = TripAdvisor.get_username(id_[4:id_.index('-')], id_[id_.index('SRC_') + 4:])
+            except Exception, e:
+                pass
+            member = PyQuery(url=TripAdvisor.baseURL + userUrl, parser='html')
+            reviewarray['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
+            reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "",
+                                                       member('li.content-info').find('a').filter(
+                                                           '[name="reviews"]').text())
+
+            reviewarray['ReviewerSince'] = TripAdvisor.getStartDateString(
+                member('.ageSince').find('p.since').text().replace('Since ', ''))
+            memberHTML = member('.ageSince').html().lower()
+            reviewarray['ReviewerGender'] = 'NA'
+            for sex, sexlttr in TripAdvisor.genderMapping.iteritems():
+                try:
+                    if memberHTML.index(sex) != -1:
+                        reviewarray['ReviewerGender'] = sexlttr
+                except ValueError:
+                    pass
+            try:
+                reviewarray['ReviewerAge'] = member('.ageSince').find('p')[1].text
+            except IndexError:
+                reviewarray['ReviewerAge'] = 'NA'
+            reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
+                                                   member('li.content-info').find('a').filter('[name="photos"]').text())
+        sys.stdout.write('.')
         return reviewarray
 
     @staticmethod
     def getStartDateString(text):
         try:
             if text.index('this') != -1:
+                return datetime.datetime.now().strftime('%m/%y')
+        except ValueError:
+            pass
+        try:
+            if text.index('today') != -1:
                 return datetime.datetime.now().strftime('%m/%y')
         except ValueError:
             pass

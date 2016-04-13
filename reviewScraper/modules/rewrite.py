@@ -7,6 +7,7 @@ import TripAdvisor
 
 
 def start():
+    print "Type 'scrape' to get started"
     try:
         while True:
             input = raw_input('> ')
@@ -26,11 +27,12 @@ def start():
 
 
 def handle_scrape():
-    print "To scrape, enter any number of search queryies seperated by a comma"
+    print "To scrape, enter a search query"
     try:
         query = raw_input('TripAdvisor Query: ')
-        print "Enter scrape parameters", "Leave blank and press enter for default values"
         types = {}
+        limit = 30
+        reviewLimit = 15
         while True:
             print ""
             print "1    Solo Reviews Only"
@@ -50,16 +52,32 @@ def handle_scrape():
                     return
                 else:
                     print "Bad Selection" + str(inp) + ", Try Again"
-            elif inp == "":
-                types = {"Solo": 5, "Group": 2}
             else:
-                print "Incorrect Input, Try Again"
+                print "Default Values used types = {\"Solo\": 5, \"Group\": 2}"
+                types = {"Solo": 5, "Group": 2}
             break
-        scraper = TripAdvisor.TripAdvisor(query=query, review_types=types, geo=60763)
+        while True:
+            print ""
+            print "Enter The Maximum Number of Attractions to Parse"
+            inp = input("Type Number>")
+            if isinstance(inp, int):
+                limit = inp
+            else:
+                print "Default Value used", str(30)
+            break
+        while True:
+            print ""
+            print "Enter The Maximum Number of Reviews Per Attraction to Parse"
+            inp = input("Type Number>")
+            if isinstance(inp, int):
+                reviewLimit = inp
+            else:
+                print "Default Value used", str(30)
+            break
+        scraper = TripAdvisor.TripAdvisor(query=query, review_types=types, geo=60763, result_limit=limit, review_limit=reviewLimit)
         print "Scraping Reviews"
         scraper.parse_reviews()
         scraper.save_to_file(out_type={'csv'})
-        print "Files Saved"
     except KeyboardInterrupt:
         pass
 
@@ -67,5 +85,4 @@ def handle_scrape():
 def handle_help():
     print "help"
 
-print "Enter a command, or type help to get instructions"
 start()
