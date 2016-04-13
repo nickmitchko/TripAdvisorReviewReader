@@ -1,4 +1,5 @@
-# Author:   Nicholai Mitchko
+#!/usr/bin/env python
+#  Author:   Nicholai Mitchko
 # File  :   main.py
 # Desc  :   Python Script that scrapes reviews and codes them for research purposes (Json format)
 # Date  :   4/9/2016
@@ -134,29 +135,30 @@ def get_username(uid, src):
     return R("a").attr['href']
 
 
-var = raw_input("Enter Search Query: ")
-print "Searching For", var
-urlvar = urllib2.quote(var, ':/')
-searchUrl = 'https://www.tripadvisor.com/Search?q=' + urlvar + '&geo=60763&pid=3826&ssrc=A&o='
-print "Creafted Search URL: " + searchUrl
-print "------------------------------"
-x = 0
-ReviewArray = []
+def main():
+    var = raw_input("Enter Search Query: ")
+    print "Searching For", var
+    urlvar = urllib2.quote(var, ':/')
+    searchUrl = 'https://www.tripadvisor.com/Search?q=' + urlvar + '&geo=60763&pid=3826&ssrc=A&o='
+    print "Creafted Search URL: " + searchUrl
+    print "------------------------------"
+    x = 0
+    ReviewArray = []
+    while 1:
+        print "Parsing " + str(x) + " - " + str(x + 30)
+        r = parse_review_urls(searchUrl + str(x))
+        if r[1] < 30:
+            break
+        x += 30
+    print "Writing JSON File:..."
+    with open('data_' + var + '.json', 'w') as outfile:
+        json.dump(ReviewArray, outfile)
+    print "Writing CSV File:..."
+    with open('data_' + var + '.csv', 'wb') as f:  # Just use 'w' mode in 3.x
+        w = csv.DictWriter(f, ReviewArray[0][0].keys(), encoding='utf-8')
+        w.writeheader()
+        for a in ReviewArray:
+            w.writerows(a)
 
-while 1:
-    print "Parsing " + str(x) + " - " + str(x + 30)
-    r = parse_review_urls(searchUrl + str(x))
-    if r[1] < 30:
-        break
-    x += 30
 
-print "Writing JSON File:..."
-with open('data_' + var + '.json', 'w') as outfile:
-    json.dump(ReviewArray, outfile)
-
-print "Writing CSV File:..."
-with open('data_' + var + '.csv', 'wb') as f:  # Just use 'w' mode in 3.x
-    w = csv.DictWriter(f, ReviewArray[0][0].keys(), encoding='utf-8')
-    w.writeheader()
-    for a in ReviewArray:
-        w.writerows(a)
+main()
