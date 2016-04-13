@@ -147,6 +147,7 @@ def main():
     while 1:
         print "Parsing " + str(x) + " - " + str(x + 30)
         r = parse_review_urls(searchUrl + str(x))
+        ReviewArray += r[0]
         if r[1] < 30:
             break
         x += 30
