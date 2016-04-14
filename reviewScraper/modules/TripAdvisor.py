@@ -152,43 +152,40 @@ class TripAdvisor:
         reviewarray['ReviewerNumHelpful'] = re.sub(r"\D", "", review('.helpfulVotesBadge').find('span').text())
         id_ = review('.col1of2').find('.memberOverlayLink').attr['id']
         userUrl = ""
-        if not isinstance(id, str):
-            reviewarray['ReviewerSince'] = 'NA'
-            reviewarray['ReviewerPoints'] = 0
-            reviewarray['ReviewerSince'] = 0
-            reviewarray['ReviewerGender'] = 'NA'
-            reviewarray['ReviewerAge'] = 'NA'
-            reviewarray['ReviewerPhotos'] = 0
+        reviewarray['ReviewerSince'] = 'NA'
+        reviewarray['ReviewerPoints'] = 0
+        reviewarray['ReviewerSince'] = 0
+        reviewarray['ReviewerGender'] = 'NA'
+        reviewarray['ReviewerAge'] = 'NA'
+        reviewarray['ReviewerPhotos'] = 0
+        try:
+            userUrl = TripAdvisor.get_username(id_[4:id_.index('-')], id_[id_.index('SRC_') + 4:])
+        except Exception, e:
             pass
-        else:
-            try:
-                userUrl = TripAdvisor.get_username(id_[4:id_.index('-')], id_[id_.index('SRC_') + 4:])
-            except Exception, e:
-                pass
-            member = PyQuery(url=TripAdvisor.baseURL + userUrl, parser='html')
-            reviewarray['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
-            reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "",
-                                                       member('li.content-info').find('a').filter(
-                                                           '[name="reviews"]').text())
+        member = PyQuery(url=TripAdvisor.baseURL + userUrl, parser='html')
+        reviewarray['ReviewerPoints'] = re.sub(r"\D", "", member('.points_info').find('.points').text())
+        reviewarray['ReviewerNumReviews'] = re.sub(r"\D", "",
+                                                   member('li.content-info').find('a').filter(
+                                                       '[name="reviews"]').text())
 
-            reviewarray['ReviewerSince'] = TripAdvisor.getStartDateString(
-                member('.ageSince').find('p.since').text().replace('Since ', ''))
-            memberHTML = member('.ageSince').html().lower()
-            reviewarray['ReviewerGender'] = 'NA'
-            for sex, sexlttr in TripAdvisor.genderMapping.iteritems():
-                try:
-                    if memberHTML.index(sex) != -1:
-                        reviewarray['ReviewerGender'] = sexlttr
-                except ValueError:
-                    pass
+        reviewarray['ReviewerSince'] = TripAdvisor.getStartDateString(
+            member('.ageSince').find('p.since').text().replace('Since ', ''))
+        memberHTML = member('.ageSince').html().lower()
+        reviewarray['ReviewerGender'] = 'NA'
+        for sex, sexlttr in TripAdvisor.genderMapping.iteritems():
             try:
-                reviewarray['ReviewerAge'] = member('.ageSince').find('p')[1].text
-            except IndexError:
-                reviewarray['ReviewerAge'] = 'NA'
-            reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
-                                                   member('li.content-info').find('a').filter('[name="photos"]').text())
+                if memberHTML.index(sex) != -1:
+                    reviewarray['ReviewerGender'] = sexlttr
+            except ValueError:
+                pass
+        try:
+            reviewarray['ReviewerAge'] = member('.ageSince').find('p')[1].text
+        except IndexError:
+            reviewarray['ReviewerAge'] = 'NA'
+        reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
+                                               member('li.content-info').find('a').filter('[name="photos"]').text())
         sys.stdout.write('.')
-        return reviewarray
+        return reviewarray56
 
     @staticmethod
     def getStartDateString(text):

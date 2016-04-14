@@ -45,16 +45,16 @@ def handle_scrape():
                 if inp == 1:
                     types = {"Solo": 5}
                 elif inp == 2:
-                    types = {"Group": 2}
+                    types = {"Couples": 2}
                 elif inp == 3:
-                    types = {"Solo": 5, "Group": 2}
+                    types = {"Solo": 5, "Couples": 2}
                 elif inp == 4:
                     return
                 else:
                     print "Bad Selection" + str(inp) + ", Try Again"
             else:
-                print "Default Values used types = {\"Solo\": 5, \"Group\": 2}"
-                types = {"Solo": 5, "Group": 2}
+                print "Default Values used types = {\"Solo\": 5, \"Couples\": 2}"
+                types = {"Solo": 5, "Couples": 2}
             break
         while True:
             print ""
