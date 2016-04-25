@@ -78,8 +78,8 @@ def handle_scrape():
         input_geocode = input("Enter geo code>")
         if isinstance(input_geocode, int):
             geocode = input_geocode
-        scraper = TripAdvisor.TripAdvisor(query=query, review_types=types, geo=geocode, result_limit=90,
-                                          review_limit=1800, result_type='a')
+        scraper = TripAdvisor.TripAdvisor(query=query, review_types=types, geo=geocode, result_limit=30,
+                                          review_limit=3, result_type='a')
         print "Scraping Reviews"
         scraper.parse_reviews()
         scraper.save_to_file(out_type={'csv'})
@@ -89,6 +89,5 @@ def handle_scrape():
 
 def handle_help():
     print "help"
-
 
 start()

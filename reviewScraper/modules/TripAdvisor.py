@@ -5,6 +5,7 @@ import re
 import time
 import json
 import sys
+from sklearn import tree
 # import traceback
 import unicodecsv as csv
 import datetime
@@ -30,6 +31,9 @@ class TripAdvisor:
         self.searchAmount = 0
         self.reviewResults = []
         self.threading_done = False
+        self.features = []
+        self.labels = []
+        self.clf = tree.DecisionTreeClassifier()
 
     def save_to_file(self, out_type={'json', 'csv'}):
         filename = self.searchQuery + '_' + str(self.geo) + '_' + str(self.resultLimit) + '_' + str(
@@ -209,7 +213,6 @@ class TripAdvisor:
             reviewarray['ReviewerAge'] = 'NA'
         reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
                                                member('li.content-info').find('a').filter('[name="photos"]').text())
-        sys.stdout.write('.')
         return reviewarray
 
     @staticmethod
@@ -283,3 +286,18 @@ class TripAdvisor:
                                                                          'filterSeasons': '',
                                                                          'filterLang': 'en',
                                                                          'returnTo': ''}).content
+
+    def initneural(self):
+        with open('trainingData/TrainingData1.csv', 'rb') as csvfile:
+            csvreader = csv.reader(csvfile, dialect='excel')
+            for row in csvreader:
+                self.features.append([row['A'], row['B']])
+                self.labels.append(1)
+        with open('trainingData/TrainingData0.csv', 'rb') as csvfile:
+            csvreader = csv.reader(csvfile, dialect='excel')
+            for row in csvreader:
+                self.features.append([row['A'], row['B']])
+                self.labels.append(0)
+        self.clf = self.clf.fit(self.features, self.labels)
+
+
