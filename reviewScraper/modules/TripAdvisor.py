@@ -54,7 +54,7 @@ class TripAdvisor:
             urls = self.get_attraction_urls(self.search())
             remaining = min(self.resultLimit - len(self.reviewResults), 30)
             print ""
-            print "Trying ", str(self.resultLimit - self.searchAmount), " Remaining Attractions"
+            print "Trying ", remaining, " Remaining Attractions"
             if len(urls) == 0 or remaining <= 0:
                 break
             if remaining < 30:
@@ -99,6 +99,24 @@ class TripAdvisor:
 
     @staticmethod
     def get_reviews_by_type(attraction_url, review_type_number, review_data, review_limit=5):
+        # rl = review_limit
+        # reviews = []
+        # counter = 0
+        # # while 1:
+        # #     counter_url = TripAdvisor.getCountedURL(attraction_url, counter)
+        # #     counter += 10
+        # #     print counter_url.index('-or')
+        # #     filtered_reviews = PyQuery(TripAdvisor.get_review(counter_url, review_type_number), parser='html')
+        # #     i = False
+        # #     for review in filtered_reviews('.reviewSelector').items():
+        # #         i = True
+        # #         if rl < 1:
+        # #             return reviews
+        # #         reviews.append(TripAdvisor.parse_single_review(review, review_data))
+        # #         rl -= 1
+        # #     if not i:
+        # #         return reviews
+        counter = 0
         filtered_reviews = PyQuery(TripAdvisor.get_review(attraction_url, review_type_number), parser='html')
         reviews = []
         for review in filtered_reviews('.reviewSelector').items():
@@ -107,6 +125,13 @@ class TripAdvisor:
             reviews.append(TripAdvisor.parse_single_review(review, review_data))
             review_limit -= 1
         return reviews
+
+    @staticmethod
+    def getCountedURL(url, counter):
+        if counter == 0:
+            return url
+        else:
+            return url[url.index('Reviews') + 7:] + '-or' + str(counter) + url[:url.index('Reviews') + 7]
 
     @staticmethod
     def parse_single_review(node, review_data):
@@ -185,7 +210,7 @@ class TripAdvisor:
         reviewarray['ReviewerPhotos'] = re.sub(r"\D", "",
                                                member('li.content-info').find('a').filter('[name="photos"]').text())
         sys.stdout.write('.')
-        return reviewarray56
+        return reviewarray
 
     @staticmethod
     def getStartDateString(text):
@@ -227,7 +252,7 @@ class TripAdvisor:
         return requests.get(TripAdvisor.searchURL, params={'q': self.searchQuery,
                                                            'geo': self.geo,
                                                            'ssrc': self.resultType,
-                                                           'pid': '3286',
+                                                           'pid': '3826',
                                                            'o': self.searchAmount}).content
 
     @staticmethod

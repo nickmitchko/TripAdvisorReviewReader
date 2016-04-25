@@ -56,25 +56,30 @@ def handle_scrape():
                 print "Default Values used types = {\"Solo\": 5, \"Couples\": 2}"
                 types = {"Solo": 5, "Couples": 2}
             break
-        while True:
-            print ""
-            print "Enter The Maximum Number of Attractions to Parse"
-            inp = input("Type Number>")
-            if isinstance(inp, int):
-                limit = inp
-            else:
-                print "Default Value used", str(30)
-            break
-        while True:
-            print ""
-            print "Enter The Maximum Number of Reviews Per Attraction to Parse"
-            inp = input("Type Number>")
-            if isinstance(inp, int):
-                reviewLimit = inp
-            else:
-                print "Default Value used", str(30)
-            break
-        scraper = TripAdvisor.TripAdvisor(query=query, review_types=types, geo=60763, result_limit=limit, review_limit=reviewLimit)
+        # while True:
+        #     print ""
+        #     print "Enter The Maximum Number of Attractions to Parse"
+        #     inp = input("Type Number>")
+        #     if isinstance(inp, int):
+        #         limit = inp
+        #     else:
+        #         print "Default Value used", str(30)
+        #     break
+        # while True:
+        #     print ""
+        #     print "Enter The Maximum Number of Reviews Per Attraction to Parse"
+        #     inp = input("Type Number>")
+        #     if isinstance(inp, int):
+        #         reviewLimit = inp
+        #     else:
+        #         print "Default Value used", str(30)
+        #     break
+        geocode = 60763
+        input_geocode = input("Enter geo code>")
+        if isinstance(input_geocode, int):
+            geocode = input_geocode
+        scraper = TripAdvisor.TripAdvisor(query=query, review_types=types, geo=geocode, result_limit=90,
+                                          review_limit=1800, result_type='a')
         print "Scraping Reviews"
         scraper.parse_reviews()
         scraper.save_to_file(out_type={'csv'})
@@ -84,5 +89,6 @@ def handle_scrape():
 
 def handle_help():
     print "help"
+
 
 start()
