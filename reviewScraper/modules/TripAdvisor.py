@@ -94,7 +94,6 @@ class TripAdvisor:
                 pageReviews += TripAdvisor.get_reviews_by_type(url, Type, review_data, review_limit)
             return pageReviews
         except Exception, e:
-            traceback.print_exc()
             return []
 
     @staticmethod
@@ -105,8 +104,11 @@ class TripAdvisor:
         for review in filtered_reviews('.reviewSelector').items():
             if review_limit < 1:
                 break
-            reviews.append(TripAdvisor.parse_single_review(review, review_data, review_type))
-            review_limit -= 1
+            try:
+                reviews.append(TripAdvisor.parse_single_review(review, review_data, review_type))
+                review_limit -= 1
+            except Exception:
+                pass
         return reviews
 
     @staticmethod
