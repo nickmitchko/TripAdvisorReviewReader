@@ -52,12 +52,12 @@ Geocode: 60763 (New York City)
 ![](data/queue.png)
 ![](data/queue_part2.png)
 
-## Options
+### Options
 
 * scrape: pulls the reviews from a location and query
 * queue: pulls the reviews from multiple locations and queries
 
-## Geocodes
+### Geocodes
 
 A geocode is an internal number used by tripadvisor to identify locations. They are pivotal in using this application.
  
@@ -67,3 +67,10 @@ A geocode is an internal number used by tripadvisor to identify locations. They 
 ![](data/Search.png)
 2. Look at the URL to find the geocode
 ![](data/Url.png)
+
+## More Info
+
+### Increasing Amount of Reviews
+
+Since reviews can be scraped almost indefinitely, by default the limit of reviews is one page of attractions and 5 reviews per attraction.
+Change these settings [here](https://github.com/nickmitchko/TripAdvisorReviewReader/blob/5d0c3d5a612d6f4446bbbbcd9107147a0876840d/reviewScraper/modules/rewrite.py#L39-L40) and [here](https://github.com/nickmitchko/TripAdvisorReviewReader/blob/5d0c3d5a612d6f4446bbbbcd9107147a0876840d/reviewScraper/modules/rewrite.py#L96-L97).
