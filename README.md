@@ -42,7 +42,9 @@ $ python2 TripAdvisorReviewReader\reviewScraper
 
 
 #### Scrape Example
+
 Query: museums
+
 Geocode: 60763 (New York City)
 ![](data/Options.png)
 ![](data/Scraping.png)
