@@ -6,8 +6,9 @@ import TripAdvisor
 
 
 def start():
-    print "\tscrape\r\n\t\tPull reviews from TripAdvisor with a single query"
-    print "\tqueue\r\n\t\tPull reviews from TripAdvisor with a queue of queries"
+    print "scrape\r\n\t\tPull reviews from TripAdvisor with a single query"
+    print "queue\r\n\t\tPull reviews from TripAdvisor with a queue of queries"
+    print "exit\r\n\t\tQuit application"
     try:
         while True:
             input = raw_input('> ')
